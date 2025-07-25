@@ -1,4 +1,4 @@
-# ALX Polly: A Polling Application for Developers
+# ALX Polly: A Polling Application
 
 Welcome to ALX Polly, a full-stack polling application built with Next.js, TypeScript, and Supabase. This project serves as a practical learning ground for modern web development concepts, with a special focus on identifying and fixing common security vulnerabilities.
 
