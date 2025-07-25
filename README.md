@@ -35,10 +35,10 @@ As a developer, writing functional code is only half the battle. Ensuring that t
     -   Think about how a malicious actor could misuse the application's features.
 
 2.  **Understand the Impact**:
-    -   For each vulnerability you find, determine the potential impact. What data could be exposed? What unauthorized actions could be performed?
+    -   For each vulnerability you find, determine the potential impact.Query your AI assistant about it. What data could be exposed? What unauthorized actions could be performed?
 
 3.  **Propose and Implement Fixes**:
-    -   Once a vulnerability is identified, your task is to fix it.
+    -   Once a vulnerability is identified, ask your AI assistant to fix it.
     -   Write secure, efficient, and clean code to patch the security holes.
     -   Ensure that your fixes do not break existing functionality for legitimate users.
 
@@ -51,13 +51,8 @@ A good security audit involves both static code analysis and dynamic testing. He
     -   Explore the page routes in the `app/(dashboard)/` directory. How is data displayed and managed?
     -   Look for hidden or undocumented features. Are there any pages not linked in the main UI?
 
-2.  **Test the Application**:
-    -   Create at least two different user accounts.
-    -   Perform actions as one user (e.g., create a poll) and see if you can access or manipulate that data as the second user.
-    -   Try to access URLs directly, even if they aren't linked. What happens?
-
-3.  **Use Your AI Assistant**:
-    -   This is an open-book test. You are encouraged to use AI developer tools to help you.
+2.  **Use Your AI Assistant**:
+    -   This is an open-book test. You are encouraged to use AI tools to help you.
     -   Ask your AI assistant to review snippets of code for security issues.
     -   Describe a feature's behavior to your AI and ask it to identify potential attack vectors.
     -   When you find a vulnerability, ask your AI for the best way to patch it.
@@ -86,7 +81,7 @@ npm install
 
 ### 3. Environment Variables
 
-The project uses Supabase for its backend. An environment file `.env.local` is included with public keys for demonstration purposes.
+The project uses Supabase for its backend. An environment file `.env.local` is needed.Use the keys you created during the Supabase setup process.
 
 ### 4. Running the Development Server
 
