@@ -24,26 +24,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
-    const getUser = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) {
-        console.error('Error fetching user:', error);
+    const init = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      // Avoid noisy error logs when there's simply no session
+      if (error && error.message !== 'Auth session missing!') {
+        console.warn('Auth: getSession error', error);
       }
       if (mounted) {
-        setUser(data.user ?? null);
-        setSession(null);
+        setSession(data.session ?? null);
+        setUser(data.session?.user ?? null);
         setLoading(false);
-        console.log('AuthContext: Initial user loaded', data.user);
       }
     };
 
-    getUser();
+    init();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       // Do not set loading to false here, only after initial load
-      console.log('AuthContext: Auth state changed', _event, session, session?.user);
+      // console.debug('Auth state changed', _event, !!session);
     });
 
     return () => {
@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await supabase.auth.signOut();
   };
 
-  console.log('AuthContext: user', user);
+  // console.debug('Auth user', !!user);
   return (
     <AuthContext.Provider value={{ session, user, signOut, loading }}>
       {children}

@@ -59,6 +59,105 @@ A good security audit involves both static code analysis and dynamic testing. He
 
 ---
 
+## Security Audit and Remediation
+
+This section documents the vulnerabilities identified during the audit and the concrete fixes applied. It also lists recommended Supabase RLS policies and database constraints to enforce security server-side.
+
+### Summary of issues and impact
+
+- Missing authorization on destructive actions
+  - deletePoll allowed deletion by id without verifying ownership.
+  - Impact: Insecure Direct Object Reference (IDOR) enabling unauthorized poll deletion.
+
+- Weak vote integrity and input validation
+  - submitVote permitted anonymous votes, lacked poll existence and bounds checks, and didn’t prevent duplicate votes.
+  - Impact: Ballot stuffing, data corruption, potential DoS via unbounded inserts.
+
+- Insufficient input sanitization for polls
+  - create/update accepted unbounded/duplicate options and long questions.
+  - Impact: Storage bloat, inconsistent data, UX issues.
+
+- Broad column selection on reads
+  - select("*") used in reads.
+  - Impact: Accidental exposure if sensitive fields are added later.
+
+- No id format checks
+  - id parameters weren’t validated as UUIDs.
+  - Impact: Unnecessary DB work and brittle error handling.
+
+- Hydration mismatch warnings
+  - Browser extensions injected client-only attributes before React hydration.
+  - Impact: Dev-time hydration warnings and noisy overlays.
+
+- No-session client error noise
+  - Client called getUser() without a session leading to AuthSessionMissingError noise.
+  - Impact: Non-fatal, but clutters logs and dev experience.
+
+### Remediation implemented
+
+- Strong validation and normalization for poll input
+  - File: `app/lib/actions/poll-actions.ts`
+  - Added zod schemas with limits: question ≤ 200 chars; 2–10 options; trims; case-insensitive de-dup.
+
+- Enforced authentication and ownership checks
+  - File: `app/lib/actions/poll-actions.ts`
+  - deletePoll/updatePoll now require an authenticated user and constrain by `user_id`.
+  - submitVote requires login and validates UUID and option bounds.
+
+- Prevented duplicate votes and invalid votes
+  - File: `app/lib/actions/poll-actions.ts`
+  - submitVote checks existing user vote via a count head query before insert.
+  - Set `user_id` to required (no anonymous votes from app layer).
+
+- Reduced data exposure
+  - File: `app/lib/actions/poll-actions.ts`
+  - Replaced select("*") with explicit columns.
+
+- Defensive id validation and cache revalidation
+  - File: `app/lib/actions/poll-actions.ts`
+  - UUID format checks on inputs; added `revalidatePath` for list and detail pages.
+
+- Hydration warning suppression for client-only attributes
+  - File: `app/layout.tsx`
+  - `<html lang="en" suppressHydrationWarning>` to ignore extension-injected attributes.
+
+- Client auth initialization without session noise
+  - File: `app/lib/context/auth-context.tsx`
+  - Initialize from `supabase.auth.getSession()` and subscribe to auth changes; avoid logging the known no-session message.
+
+### Database hardening (Supabase)
+
+Apply these to complement app-layer checks. Adjust names to your schema.
+
+- Unique vote per (poll_id, user_id)
+  - Optional SQL (run in Supabase SQL editor):
+    - create unique index if not exists on votes(poll_id, user_id);
+
+- Enforce non-null user_id on votes
+  - Optional: alter table votes alter column user_id set not null;
+
+- Recommended RLS policies
+  - polls: allow update/delete only when `polls.user_id = auth.uid()`.
+  - votes: allow insert/select for rows where `votes.user_id = auth.uid()`; optionally disallow voting on own poll.
+
+### Verification checklist
+
+- As user A, create a poll; as user B, attempt to delete/update it → should fail.
+- As a logged-out visitor, try to vote → blocked with clear error.
+- As a logged-in user, vote twice on the same poll → second attempt blocked.
+- Create/update poll with duplicate/blank options or excessive length → validation error.
+- Navigate pages with extensions enabled → no hydration mismatch errors.
+- Load app without being logged in → no “Auth session missing!” error spam in console.
+
+### Known limitations / next steps
+
+- Add server-side rate limiting for voting endpoints to further mitigate abuse.
+- Add unit/integration tests for server actions and RLS policies.
+- Consider preventing users from voting on their own polls via a policy.
+- Surface user-friendly error messages in UI for all validation failures.
+
+---
+
 ## Getting Started
 
 To begin your security audit, you'll need to get the application running on your local machine.
