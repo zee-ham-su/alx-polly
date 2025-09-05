@@ -23,6 +23,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Root app shell. Wraps all routes with global fonts and AuthProvider context.
   return (
   <html lang="en" suppressHydrationWarning>
       <body

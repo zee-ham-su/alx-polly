@@ -4,7 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-// Validation schemas and helpers
+/**
+ * Validation schemas and helpers for poll operations.
+ * Why: Ensure consistent input constraints, normalize user input, and fail fast with clear errors.
+ */
 const PollOptionSchema = z.string().transform((s) => s.trim()).pipe(z.string().min(1).max(100));
 const PollSchema = z.object({
   question: z.string().transform((s) => s.trim()).pipe(z.string().min(1).max(200)),
@@ -13,6 +16,10 @@ const PollSchema = z.object({
 
 const isUuid = (id: string) => /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(id);
 
+/**
+ * Normalizes poll options: trims, removes empties, deduplicates case-insensitively, enforces max list length.
+ * Why: Prevents storage bloat, ambiguous duplicates (e.g., "Yes" vs "yes"), and ensures a consistent UX.
+ */
 function normalizeOptions(options: string[]) {
   // trim, remove empties, dedupe (case-insensitive), and cap length
   const seen = new Set<string>();
@@ -29,7 +36,13 @@ function normalizeOptions(options: string[]) {
   return result;
 }
 
-// CREATE POLL
+/**
+ * Creates a poll owned by the current user.
+ * Why: Centralized server-side creation with validation and ownership.
+ * Inputs: FormData with fields { question: string, options: string[] }
+ * Output: { error: string | null }
+ * Edge cases: rejects <2 options, duplicate/blank options, overly long values, unauthenticated users.
+ */
 export async function createPoll(formData: FormData) {
   const supabase = await createClient();
 
@@ -69,7 +82,12 @@ export async function createPoll(formData: FormData) {
   return { error: null };
 }
 
-// GET USER POLLS
+/**
+ * Lists polls belonging to the current user, newest first.
+ * Why: User dashboard source for "My Polls".
+ * Output: { polls: Array<...>, error: string | null }
+ * Security: restricts to the authenticated user's id; selects minimal columns.
+ */
 export async function getUserPolls() {
   const supabase = await createClient();
   const {
@@ -88,7 +106,13 @@ export async function getUserPolls() {
   return { polls: data ?? [], error: null };
 }
 
-// GET POLL BY ID
+/**
+ * Retrieves a single poll by id.
+ * Why: Poll detail page data fetch.
+ * Inputs: id (uuid string)
+ * Output: { poll: object | null, error: string | null }
+ * Security: validates UUID and selects minimal columns to reduce accidental exposure.
+ */
 export async function getPollById(id: string) {
   const supabase = await createClient();
   if (!isUuid(id)) {
@@ -104,7 +128,13 @@ export async function getPollById(id: string) {
   return { poll: data, error: null };
 }
 
-// SUBMIT VOTE
+/**
+ * Submits a vote for a given poll option on behalf of the current user.
+ * Why: Maintains vote integrity and enforces one vote per user per poll.
+ * Inputs: pollId (uuid), optionIndex (integer >=0)
+ * Output: { error: string | null }
+ * Edge cases: invalid poll id, missing auth, option out of bounds, duplicate vote.
+ */
 export async function submitVote(pollId: string, optionIndex: number) {
   const supabase = await createClient();
   const {
@@ -131,6 +161,7 @@ export async function submitVote(pollId: string, optionIndex: number) {
   if (optionIndex >= optionsLen) return { error: "Invalid option selected." };
 
   // Prevent duplicate votes by same user for the same poll
+  // Note: Also recommend a unique DB index on (poll_id, user_id) for defense-in-depth.
   const { count: existingCount, error: existsError } = await supabase
     .from("votes")
     .select("id", { count: "exact", head: true })
@@ -151,7 +182,12 @@ export async function submitVote(pollId: string, optionIndex: number) {
   return { error: null };
 }
 
-// DELETE POLL
+/**
+ * Deletes a poll owned by the current user.
+ * Why: Enforces authorization by both id and user_id.
+ * Inputs: id (uuid string)
+ * Output: { error: string | null }
+ */
 export async function deletePoll(id: string) {
   const supabase = await createClient();
   if (!isUuid(id)) return { error: "Invalid poll id." };
@@ -174,7 +210,12 @@ export async function deletePoll(id: string) {
   return { error: null };
 }
 
-// UPDATE POLL
+/**
+ * Updates a poll (question and options) if owned by the current user.
+ * Why: Allows authors to refine their polls with full validation.
+ * Inputs: pollId (uuid), FormData with fields { question, options[] }
+ * Output: { error: string | null }
+ */
 export async function updatePoll(pollId: string, formData: FormData) {
   const supabase = await createClient();
 

@@ -28,6 +28,7 @@ export default function EditPollForm({ poll }: { poll: any }) {
       action={async (formData) => {
         setError(null);
         setSuccess(false);
+  // Ensure server action receives current state values, not stale DOM values.
         formData.set('question', question);
         formData.delete('options');
         options.forEach((opt) => formData.append('options', opt));

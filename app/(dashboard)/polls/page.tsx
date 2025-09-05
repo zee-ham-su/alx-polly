@@ -3,6 +3,11 @@ import { Button } from '@/components/ui/button';
 import { getUserPolls } from '@/app/lib/actions/poll-actions';
 import PollActions from './PollActions'; 
 
+/**
+ * My Polls page (server component).
+ * Why: Provides an overview of the authenticated user's polls.
+ * Behavior: Fetches user-owned polls via server action and renders a grid of items.
+ */
 export default async function PollsPage() {
   const { polls, error } = await getUserPolls();
 

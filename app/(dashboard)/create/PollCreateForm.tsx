@@ -27,6 +27,7 @@ export default function PollCreateForm() {
       action={async (formData) => {
         setError(null);
         setSuccess(false);
+  // Server action consumes FormData directly; question/options are read server-side.
         const res = await createPoll(formData);
         if (res?.error) {
           setError(res.error);

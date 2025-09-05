@@ -18,6 +18,8 @@ interface PollActionsProps {
 
 export default function PollActions({ poll }: PollActionsProps) {
   const { user } = useAuth();
+  // Note: We optimistically reload on delete to refresh the list.
+  // In a richer UX, we could revalidate and update state without full reload.
   const handleDelete = async () => {
     if (confirm("Are you sure you want to delete this poll?")) {
       await deletePoll(poll.id);
