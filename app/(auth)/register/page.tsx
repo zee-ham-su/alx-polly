@@ -6,21 +6,32 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { register } from '@/app/lib/actions/auth-actions';
+import { useAuth } from '@/app/lib/context/auth-context';
 
 export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const { signUp } = useAuth();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccess(false);
+    
     const formData = new FormData(event.currentTarget);
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     const confirmPassword = formData.get('confirmPassword') as string;
+
+    // Basic validation
+    if (!name || !email || !password || !confirmPassword) {
+      setError('Please fill in all fields');
+      setLoading(false);
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -28,14 +39,20 @@ export default function RegisterPage() {
       return;
     }
 
-    const result = await register({ name, email, password });
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      setLoading(false);
+      return;
+    }
+
+    const result = await signUp(email, password, name);
 
     if (result?.error) {
       setError(result.error);
-      setLoading(false);
     } else {
-      window.location.href = '/polls'; // Full reload to pick up session
+      setSuccess(true);
     }
+    setLoading(false);
   };
 
   return (
@@ -89,8 +106,13 @@ export default function RegisterPage() {
               />
             </div>
             {error && <p className="text-red-500 text-sm">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Registering...' : 'Register'}
+            {success && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded text-sm">
+                Account created successfully! Please check your email to verify your account.
+              </div>
+            )}
+            <Button type="submit" className="w-full" disabled={loading || success}>
+              {loading ? 'Registering...' : success ? 'Account Created!' : 'Register'}
             </Button>
           </form>
         </CardContent>

@@ -15,7 +15,14 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   }, [user, loading, router]);
 
   if (loading) {
-    return <div>Loading...</div>; // Or a loading spinner
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (user) {

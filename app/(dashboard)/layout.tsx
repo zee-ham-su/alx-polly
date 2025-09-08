@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/app/lib/context/auth-context";
+import { BarChart3 } from "lucide-react";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, signOut, loading } = useAuth();
@@ -33,7 +34,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
-        <p>Loading user session...</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-slate-600">Loading user session...</p>
+        </div>
       </div>
     );
   }
@@ -52,6 +56,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <nav className="hidden md:flex items-center space-x-6">
             <Link href="/polls" className="text-slate-600 hover:text-slate-900">
               My Polls
+            </Link>
+            <Link href="/analytics" className="text-slate-600 hover:text-slate-900 flex items-center space-x-1">
+              <BarChart3 className="h-4 w-4" />
+              <span>Analytics</span>
             </Link>
             <Link
               href="/create"
