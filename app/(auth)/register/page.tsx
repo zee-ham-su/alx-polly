@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
   const { signUp } = useAuth();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -19,6 +20,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
     setSuccess(false);
+    setConfirmationMessage(null);
     
     const formData = new FormData(event.currentTarget);
     const name = formData.get('name') as string;
@@ -51,6 +53,9 @@ export default function RegisterPage() {
       setError(result.error);
     } else {
       setSuccess(true);
+      if (result.needsConfirmation && result.message) {
+        setConfirmationMessage(result.message);
+      }
     }
     setLoading(false);
   };
@@ -108,7 +113,10 @@ export default function RegisterPage() {
             {error && <p className="text-red-500 text-sm">{error}</p>}
             {success && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded text-sm">
-                Account created successfully! Please check your email to verify your account.
+                <div className="font-medium">Account created successfully!</div>
+                <div className="mt-1">
+                  {confirmationMessage || 'You can now sign in to your account.'}
+                </div>
               </div>
             )}
             <Button type="submit" className="w-full" disabled={loading || success}>

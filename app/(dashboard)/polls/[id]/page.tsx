@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,10 +22,34 @@ const mockPoll = {
   createdBy: 'John Doe',
 };
 
-export default function PollDetailPage({ params }: { params: { id: string } }) {
+export default function PollDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  // For client components in Next.js 15, we need to handle params as a promise
+  const [pollId, setPollId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    params.then(({ id }) => {
+      setPollId(id);
+    });
+  }, [params]);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [hasVoted, setHasVoted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Show loading while pollId is being resolved
+  if (!pollId) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-8 bg-gray-200 rounded w-1/2 mb-6"></div>
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // In a real app, you would fetch the poll data based on the ID
   const poll = mockPoll;
@@ -56,7 +80,7 @@ export default function PollDetailPage({ params }: { params: { id: string } }) {
         </Link>
         <div className="flex space-x-2">
           <Button variant="outline" asChild>
-            <Link href={`/polls/${params.id}/edit`}>Edit Poll</Link>
+            <Link href={`/polls/${pollId}/edit`}>Edit Poll</Link>
           </Button>
           <Button variant="outline" className="text-red-500 hover:text-red-700">
             Delete

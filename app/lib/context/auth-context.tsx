@@ -5,12 +5,18 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import type { Session, User } from '@supabase/supabase-js';
 
+interface SignUpResult {
+  error: string | null;
+  needsConfirmation?: boolean;
+  message?: string;
+}
+
 const AuthContext = createContext<{ 
   session: Session | null;
   user: User | null;
   signOut: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{error: string | null}>;
-  signUp: (email: string, password: string, name: string) => Promise<{error: string | null}>;
+  signUp: (email: string, password: string, name: string) => Promise<SignUpResult>;
   loading: boolean;
 }>({ 
   session: null, 
@@ -101,7 +107,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, name: string) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -113,6 +119,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) {
         return { error: error.message };
+      }
+      
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
+        return { 
+          error: null, 
+          needsConfirmation: true,
+          message: 'Please check your email and click the confirmation link to activate your account.' 
+        };
       }
       
       return { error: null };
