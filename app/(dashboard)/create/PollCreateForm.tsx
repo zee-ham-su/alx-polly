@@ -5,6 +5,8 @@ import { createPoll } from "@/app/lib/actions/poll-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { PlusCircle } from "lucide-react";
 
 export default function PollCreateForm() {
   const [options, setOptions] = useState(["", ""]);
@@ -23,7 +25,13 @@ export default function PollCreateForm() {
   };
 
   return (
+    <Card className="max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle>Create a New Poll</CardTitle>
+      </CardHeader>
+      <CardContent>
     <form
+      id="create-poll-form"
       action={async (formData) => {
         setError(null);
         setSuccess(false);
@@ -38,7 +46,7 @@ export default function PollCreateForm() {
           }, 1200);
         }
       }}
-      className="space-y-6 max-w-md mx-auto"
+      className="space-y-6"
     >
       <div>
         <Label htmlFor="question">Poll Question</Label>
@@ -61,13 +69,17 @@ export default function PollCreateForm() {
             )}
           </div>
         ))}
-        <Button type="button" onClick={addOption} variant="secondary">
-          Add Option
+        <Button type="button" onClick={addOption} variant="secondary" className="inline-flex items-center gap-2">
+          <PlusCircle className="h-4 w-4" /> Add Option
         </Button>
       </div>
       {error && <div className="text-red-500">{error}</div>}
       {success && <div className="text-green-600">Poll created! Redirecting...</div>}
-      <Button type="submit">Create Poll</Button>
-    </form>
+      </form>
+      </CardContent>
+      <CardFooter>
+        <Button type="submit" form="create-poll-form" className="ml-auto">Create Poll</Button>
+      </CardFooter>
+    </Card>
   );
 } 
