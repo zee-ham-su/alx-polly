@@ -22,7 +22,8 @@ export default function PollCreateForm() {
     success,
     showSchedule,
     setShowSchedule,
-    handleSubmit,
+  handleSubmit,
+  isSubmitting,
   } = usePollCreationForm();
 
   return (
@@ -31,7 +32,14 @@ export default function PollCreateForm() {
         <CardTitle>Create a New Poll</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={handleSubmit} className="space-y-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handleSubmit(formData);
+          }}
+          className="space-y-6"
+        >
           <div>
             <Label htmlFor="question">Poll Question</Label>
             <Input name="question" id="question" required />
@@ -76,7 +84,9 @@ export default function PollCreateForm() {
           )}
           {error && <div className="text-red-500">{error}</div>}
           {success && <div className="text-green-600">Poll created! Redirecting...</div>}
-          <Button type="submit" className="ml-auto">Create Poll</Button>
+          <Button type="submit" className="ml-auto" disabled={isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create Poll"}
+          </Button>
         </form>
       </CardContent>
     </Card>
