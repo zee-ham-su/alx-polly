@@ -152,6 +152,54 @@ export async function getPollById(id: string) {
 }
 
 /**
+ * Retrieves the results of a poll including vote counts for each option.
+ * Why: To display poll results to users.
+ * Inputs: id (uuid string)
+ * Output: { poll: object | null, error: string | null }
+ * Security: validates UUID and selects minimal columns to reduce accidental exposure.
+ */
+export async function getPollResults(id: string) {
+  const supabase = await createClient();
+  if (!isUuid(id)) {
+    return { poll: null, error: "Invalid poll id." };
+  }
+
+  const { data, error } = await supabase
+    .from("polls")
+    .select("*, options(*)")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    return { poll: null, error: error.message };
+  }
+
+  const { data: votes, error: votesError } = await supabase
+    .from("votes")
+    .select("option_index")
+    .eq("poll_id", id);
+
+  if (votesError) {
+    return { poll: null, error: votesError.message };
+  }
+
+  const voteCounts = votes.reduce((acc, vote) => {
+    acc[vote.option_index] = (acc[vote.option_index] || 0) + 1;
+    return acc;
+  }, {} as Record<number, number>);
+
+  const pollWithOptionsAndVotes = {
+    ...data,
+    options: data.options.map((option, index) => ({
+      ...option,
+      votes: voteCounts[index] || 0,
+    })),
+  };
+
+  return { poll: pollWithOptionsAndVotes, error: null };
+}
+
+/**
  * Submits a vote for a given poll option on behalf of the current user.
  * Why: Maintains vote integrity and enforces one vote per user per poll.
  * Inputs: pollId (uuid), optionIndex (integer >=0)
