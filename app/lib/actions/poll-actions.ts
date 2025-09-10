@@ -70,7 +70,7 @@ export async function createPoll(formData: FormData) {
     return { error: "You must be logged in to create a poll." };
   }
 
-  const { error } = await supabase.from("polls").insert([
+  const { data: pollData, error } = await supabase.from("polls").insert([
     {
       user_id: user.id,
       question: parsed.data.question,
@@ -83,7 +83,7 @@ export async function createPoll(formData: FormData) {
     return { error: error.message };
   }
 
-  const pollId = error ? null : (await supabase.from('polls').select('id').order('created_at', { ascending: false }).limit(1).single())?.data?.id;
+  const pollId = pollData?.[0]?.id;
 
   if (!pollId) {
     return { error: "Failed to create poll." };
@@ -95,10 +95,6 @@ export async function createPoll(formData: FormData) {
 
   if (optionsError) {
     return { error: optionsError.message };
-  }
-
-  if (error) {
-    return { error: error.message };
   }
 
   revalidatePath("/polls");
