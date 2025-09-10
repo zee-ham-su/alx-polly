@@ -49,28 +49,22 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <header className="border-b bg-white sticky top-0 z-10">
+      <header className="bg-primary text-primary-foreground sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/polls" className="text-xl font-bold text-slate-800">
+          <Link href="/polls" className="text-xl font-bold">
             ALX Polly
           </Link>
           <nav className="hidden md:flex items-center space-x-6">
-            <Link href="/polls" className="text-slate-600 hover:text-slate-900">
+            <Link href="/polls" className="hover:underline">
               My Polls
             </Link>
-            <Link href="/analytics" className="text-slate-600 hover:text-slate-900 flex items-center space-x-1">
+            <Link href="/analytics" className="hover:underline flex items-center space-x-1">
               <BarChart3 className="h-4 w-4" />
               <span>Analytics</span>
             </Link>
-            <Link
-              href="/create"
-              className="text-slate-600 hover:text-slate-900"
-            >
-              Create Poll
-            </Link>
           </nav>
           <div className="flex items-center space-x-2">
-            <Button asChild>
+            <Button variant="secondary" asChild>
               <Link href="/create">Create Poll</Link>
             </Button>
             <ThemeToggle />
@@ -117,8 +111,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main className="flex-1 container mx-auto px-4 py-6">{children}</main>
-      <footer className="border-t bg-white py-4">
-        <div className="container mx-auto px-4 text-center text-sm text-slate-500">
+      <footer className="bg-secondary text-secondary-foreground py-4">
+        <div className="container mx-auto px-4 text-center text-sm">
           &copy; {new Date().getFullYear()} ALX Polly. All rights reserved.
         </div>
       </footer>

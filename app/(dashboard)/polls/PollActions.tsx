@@ -68,11 +68,11 @@ export default function PollActions({ poll }: PollActionsProps) {
   };
 
   return (
-    <Card className="h-full">
+    <Card className="h-full transition-all duration-300 ease-in-out hover:shadow-lg hover:scale-105">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="line-clamp-2">{poll.question}</CardTitle>
-          <Badge variant={poll.status === 'open' ? 'default' : 'secondary'}>
+          <Badge variant={poll.status === 'open' ? 'default' : 'secondary'} className={poll.status === 'open' ? 'bg-primary' : ''}>
             {poll.status}
           </Badge>
         </div>

@@ -111,19 +111,23 @@ export async function createPoll(formData: FormData) {
  * Output: { polls: Array<...>, error: string | null }
  * Security: restricts to the authenticated user's id; selects minimal columns.
  */
-export async function getUserPolls() {
+export async function getUserPolls({ page = 1 }: { page?: number } = {}) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { polls: [], error: "Not authenticated" };
 
+  const pageSize = 10;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   const { data, error } = await supabase
     .from("polls")
-    // limit fields to reduce accidental data exposure
     .select("*, options(*)")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   if (error) return { polls: [], error: error.message };
   return { polls: data ?? [], error: null };
