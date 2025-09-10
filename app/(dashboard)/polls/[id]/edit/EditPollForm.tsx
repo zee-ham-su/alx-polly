@@ -6,11 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+import { Calendar, PlusCircle } from 'lucide-react';
+
+/**
+ * Renders a form for editing an existing poll.
+ * Pre-fills the form with the poll's current data, including the question, options, and any scheduled open or close times.
+ * Handles form submission and displays success or error messages.
+ */
 export default function EditPollForm({ poll }: { poll: any }) {
   const [question, setQuestion] = useState(poll.question);
-  const [options, setOptions] = useState<string[]>(poll.options || []);
+  const [options, setOptions] = useState<string[]>(poll.options?.map((opt: any) => opt.text) || []);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(!!(poll.scheduled_open_time || poll.scheduled_close_time));
 
   const handleOptionChange = (idx: number, value: string) => {
     setOptions((opts) => opts.map((opt, i) => (i === idx ? value : opt)));
@@ -21,6 +29,14 @@ export default function EditPollForm({ poll }: { poll: any }) {
     if (options.length > 2) {
       setOptions((opts) => opts.filter((_, i) => i !== idx));
     }
+  };
+
+  // Helper to format date for datetime-local input
+  const formatDateTimeLocal = (dateString: string | null) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    // Format to YYYY-MM-DDTHH:mm
+    return new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
   };
 
   return (
@@ -71,10 +87,39 @@ export default function EditPollForm({ poll }: { poll: any }) {
             )}
           </div>
         ))}
-        <Button type="button" onClick={addOption} variant="secondary">
-          Add Option
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button type="button" onClick={addOption} variant="secondary" className="inline-flex items-center gap-2">
+            <PlusCircle className="h-4 w-4" /> Add Option
+          </Button>
+          <Button type="button" onClick={() => setShowSchedule(!showSchedule)} variant="outline" className="inline-flex items-center gap-2">
+            <Calendar className="h-4 w-4" /> Schedule
+          </Button>
+        </div>
       </div>
+
+      {showSchedule && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="scheduled_open_time">Scheduled Open Time</Label>
+            <Input 
+              name="scheduled_open_time" 
+              id="scheduled_open_time" 
+              type="datetime-local" 
+              defaultValue={formatDateTimeLocal(poll.scheduled_open_time)} 
+            />
+          </div>
+          <div>
+            <Label htmlFor="scheduled_close_time">Scheduled Close Time</Label>
+            <Input 
+              name="scheduled_close_time" 
+              id="scheduled_close_time" 
+              type="datetime-local" 
+              defaultValue={formatDateTimeLocal(poll.scheduled_close_time)} 
+            />
+          </div>
+        </div>
+      )}
+
       {error && <div className="text-red-500">{error}</div>}
       {success && <div className="text-green-600">Poll updated! Redirecting...</div>}
       <Button type="submit">Update Poll</Button>

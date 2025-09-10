@@ -12,6 +12,8 @@ const PollOptionSchema = z.string().transform((s) => s.trim()).pipe(z.string().m
 const PollSchema = z.object({
   question: z.string().transform((s) => s.trim()).pipe(z.string().min(1).max(200)),
   options: z.array(PollOptionSchema).min(2).max(10),
+  scheduled_open_time: z.coerce.date().optional(),
+  scheduled_close_time: z.coerce.date().optional(),
 });
 
 const isUuid = (id: string) => /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(id);
@@ -39,7 +41,7 @@ function normalizeOptions(options: string[]) {
 /**
  * Creates a poll owned by the current user.
  * Why: Centralized server-side creation with validation and ownership.
- * Inputs: FormData with fields { question: string, options: string[] }
+ * Inputs: FormData with fields { question: string, options: string[], scheduled_open_time?: string, scheduled_close_time?: string }
  * Output: { error: string | null }
  * Edge cases: rejects <2 options, duplicate/blank options, overly long values, unauthenticated users.
  */
@@ -48,8 +50,10 @@ export async function createPoll(formData: FormData) {
 
   const question = (formData.get("question") as string) ?? "";
   const options = normalizeOptions((formData.getAll("options") as string[]) ?? []);
+  const scheduled_open_time = formData.get("scheduled_open_time") as string;
+  const scheduled_close_time = formData.get("scheduled_close_time") as string;
 
-  const parsed = PollSchema.safeParse({ question, options });
+  const parsed = PollSchema.safeParse({ question, options, scheduled_open_time, scheduled_close_time });
   if (!parsed.success) {
     return { error: "Please provide a valid question and at least two unique options (max 10)." };
   }
@@ -70,9 +74,28 @@ export async function createPoll(formData: FormData) {
     {
       user_id: user.id,
       question: parsed.data.question,
-      options: parsed.data.options,
+      scheduled_open_time: parsed.data.scheduled_open_time,
+      scheduled_close_time: parsed.data.scheduled_close_time,
     },
-  ]);
+  ]).select();
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const pollId = error ? null : (await supabase.from('polls').select('id').order('created_at', { ascending: false }).limit(1).single())?.data?.id;
+
+  if (!pollId) {
+    return { error: "Failed to create poll." };
+  }
+
+  const { error: optionsError } = await supabase.from("options").insert(
+    parsed.data.options.map((option) => ({ poll_id: pollId, text: option }))
+  );
+
+  if (optionsError) {
+    return { error: optionsError.message };
+  }
 
   if (error) {
     return { error: error.message };
@@ -98,7 +121,7 @@ export async function getUserPolls() {
   const { data, error } = await supabase
     .from("polls")
     // limit fields to reduce accidental data exposure
-    .select("id, question, options, user_id, created_at")
+    .select("*, options(*)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -120,7 +143,7 @@ export async function getPollById(id: string) {
   }
   const { data, error } = await supabase
     .from("polls")
-    .select("id, question, options, user_id, created_at")
+    .select("*, options(*)")
     .eq("id", id)
     .single();
 
@@ -152,7 +175,7 @@ export async function submitVote(pollId: string, optionIndex: number) {
   // Ensure poll exists and optionIndex is in range
   const { data: poll, error: pollError } = await supabase
     .from("polls")
-    .select("id, options")
+    .select("*, options(*)")
     .eq("id", pollId)
     .single();
   if (pollError || !poll) return { error: "Poll not found." };
@@ -213,7 +236,7 @@ export async function deletePoll(id: string) {
 /**
  * Updates a poll (question and options) if owned by the current user.
  * Why: Allows authors to refine their polls with full validation.
- * Inputs: pollId (uuid), FormData with fields { question, options[] }
+ * Inputs: pollId (uuid), FormData with fields { question, options[], scheduled_open_time?: string, scheduled_close_time?: string }
  * Output: { error: string | null }
  */
 export async function updatePoll(pollId: string, formData: FormData) {
@@ -223,8 +246,10 @@ export async function updatePoll(pollId: string, formData: FormData) {
 
   const question = (formData.get("question") as string) ?? "";
   const options = normalizeOptions((formData.getAll("options") as string[]) ?? []);
+  const scheduled_open_time = formData.get("scheduled_open_time") as string;
+  const scheduled_close_time = formData.get("scheduled_close_time") as string;
 
-  const parsed = PollSchema.safeParse({ question, options });
+  const parsed = PollSchema.safeParse({ question, options, scheduled_open_time, scheduled_close_time });
   if (!parsed.success) {
     return { error: "Please provide a valid question and at least two unique options (max 10)." };
   }
@@ -244,7 +269,62 @@ export async function updatePoll(pollId: string, formData: FormData) {
   // Only allow updating polls owned by the user
   const { error } = await supabase
     .from("polls")
-    .update({ question: parsed.data.question, options: parsed.data.options })
+    .update({
+      question: parsed.data.question,
+      scheduled_open_time: parsed.data.scheduled_open_time,
+      scheduled_close_time: parsed.data.scheduled_close_time,
+    })
+    .eq("id", pollId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const { error: deleteError } = await supabase.from("options").delete().eq("poll_id", pollId);
+
+  if (deleteError) {
+    return { error: deleteError.message };
+  }
+
+  const { error: optionsError } = await supabase.from("options").insert(
+    parsed.data.options.map((option) => ({ poll_id: pollId, text: option }))
+  );
+
+  if (optionsError) {
+    return { error: optionsError.message };
+  }
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/polls");
+  revalidatePath(`/polls/${pollId}`);
+  return { error: null };
+}
+
+/**
+ * Publishes a draft poll, changing its status to 'open'.
+ * Why: Allows authors to make their polls live.
+ * Inputs: pollId (uuid)
+ * Output: { error: string | null }
+ */
+export async function publishPoll(pollId: string) {
+  const supabase = await createClient();
+
+  if (!isUuid(pollId)) return { error: "Invalid poll id." };
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError) return { error: userError.message };
+  if (!user) return { error: "You must be logged in to publish a poll." };
+
+  const { error } = await supabase
+    .from("polls")
+    .update({ status: 'open' })
     .eq("id", pollId)
     .eq("user_id", user.id);
 
@@ -253,6 +333,5 @@ export async function updatePoll(pollId: string, formData: FormData) {
   }
 
   revalidatePath("/polls");
-  revalidatePath(`/polls/${pollId}`);
   return { error: null };
 }
